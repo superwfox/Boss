@@ -1,9 +1,8 @@
 package sudark2.Sudark.boss;
 
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,13 +10,11 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static org.bukkit.plugin.java.JavaPlugin.getPlugin;
+import static sudark2.Sudark.boss.TimeForBoss.T;
 import static sudark2.Sudark.boss.ZoneExpand.SpiralPlaneGenerator.generateSpiralBlockQueueAsync;
 
 public class ZoneExpand implements Listener {
@@ -31,20 +28,31 @@ public class ZoneExpand implements Listener {
         if (!e.getClickedBlock().getType().equals(Material.DRAGON_EGG)) return;
         if (!pl.getWorld().getName().equals("BEEF-DUNE")) return;
 
-        generateSpiralBlockQueueAsync(this, Boss.zones.get(),Boss.endZones.get() ).thenAccept(blockQueue -> {
-            // 同步搬运
+        Location loc1 = Boss.zones.get(T);
+        Location loc2 = Boss.endZones.get(T);
+
+        generateSpiralBlockQueueAsync(Boss.getPlugin(Boss.class), loc1, loc2).thenAccept(blockQueue -> {
             SpiralPlaneGenerator.moveBlocksSpirally(
                     getPlugin(Boss.class),
                     blockQueue,
                     bl.getLocation(),
-                    8,
-                    1L // 每2tick执行
+                    60,
+                    1L
             );
         });
-    }
 
-    public void expand(Block bl, Player pl) {
+        int range = Math.abs(loc1.getBlockX() - loc2.getBlockX());
 
+        bl.setType(Material.AIR);
+        pl.playSound(pl, Sound.BLOCK_BEEHIVE_ENTER, 1, 1);
+
+        e.setCancelled(true);
+        Plugin plugin = Boss.getPlugin(Boss.class);
+
+        switch (T) {
+            case 0 -> Warden_BOSS.newTask(plugin, bl.getLocation(), pl, range);
+            case 1 -> Magma_BOSS.newTask(plugin, bl.getLocation(), pl, range);
+        }
     }
 
     public class SpiralPlaneGenerator {
@@ -68,10 +76,11 @@ public class ZoneExpand implements Listener {
 
         /**
          * 异步生成螺旋顺序的方块队列，包含所有Y层的方块
-         * @param plugin Bukkit插件实例
+         *
+         * @param plugin  Bukkit插件实例
          * @param corner1 矩形区域一个角的坐标
          * @param corner2 矩形区域对角的坐标
-         * @return CompletableFuture<Queue<Location>> 按螺旋顺序存储的方块位置
+         * @return CompletableFuture<Queue < Location>> 按螺旋顺序存储的方块位置
          */
         public static CompletableFuture<Queue<Location>> generateSpiralBlockQueueAsync(Plugin plugin, Location corner1, Location corner2) {
             return CompletableFuture.supplyAsync(() -> {
@@ -163,6 +172,8 @@ public class ZoneExpand implements Listener {
                     }
                 }
 
+
+                blockQueue.add(new Location(world, centerX, minY, centerZ));
                 blockQueue.addAll(spiralPoints);
                 return blockQueue;
             });
@@ -170,21 +181,25 @@ public class ZoneExpand implements Listener {
 
         /**
          * 同步将方块队列搬到目标位置，按螺旋顺序重新出现
-         * @param plugin Bukkit插件实例
-         * @param blockQueue 方块队列（来自generateSpiralBlockQueueAsync）
-         * @param target 目标中心坐标（新位置）
+         *
+         * @param plugin        Bukkit插件实例
+         * @param blockQueue    方块队列（来自generateSpiralBlockQueueAsync）
+         * @param target        目标中心坐标（新位置）
          * @param blocksPerTick 每tick设置的方块数
-         * @param tickDelay 每次设置的间隔（tick）
+         * @param tickDelay     每次设置的间隔（tick）
          */
         public static void moveBlocksSpirally(Plugin plugin, Queue<Location> blockQueue, Location target, int blocksPerTick, long tickDelay) {
             World targetWorld = target.getWorld();
             int targetX = target.getBlockX();
             int targetY = target.getBlockY();
             int targetZ = target.getBlockZ();
+            Deque<BlockState> restoreBlocks = new ArrayDeque<>();
+            Location setting = blockQueue.poll();
 
             new BukkitRunnable() {
                 @Override
                 public void run() {
+
                     // 每次处理blocksPerTick个方块
                     for (int i = 0; i < blocksPerTick && !blockQueue.isEmpty(); i++) {
                         Location source = blockQueue.poll();
@@ -194,24 +209,40 @@ public class ZoneExpand implements Listener {
                         }
 
                         // 计算相对坐标
-                        int relX = source.getBlockX();
+                        int relX = source.getBlockX() - setting.getBlockX();
                         int relY = source.getBlockY();
-                        int relZ = source.getBlockZ();
+                        int relZ = source.getBlockZ() - setting.getBlockZ();
 
                         // 目标位置 = 目标中心 + 相对偏移
                         Location newLoc = new Location(targetWorld, targetX + relX, targetY + relY, targetZ + relZ);
 
                         // 复制方块类型（空气用默认值）
-                        Material blockType = source.getBlock().getType();
-                        if (blockType == Material.AIR) {
-                            blockType = Material.STONE; // 可自定义
-                        }
-                        newLoc.getBlock().setType(blockType);
+                        Block blockType = source.getBlock();
+
+                        restoreBlocks.push(newLoc.getBlock().getState());
+                        newLoc.getBlock().setBlockData(blockType.getBlockData(), false);
                     }
 
                     // 队列为空，任务结束
                     if (blockQueue.isEmpty()) {
                         cancel();
+
+                        new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                for (int i = 0; i < 32 && !restoreBlocks.isEmpty(); i++) {
+                                    BlockState state = restoreBlocks.pop();
+                                    state.update(true, false);
+                                }
+                                if (restoreBlocks.isEmpty()) {
+                                    cancel();
+                                    Bukkit.getOnlinePlayers().forEach(pl -> {
+                                        pl.playSound(pl, Sound.ENTITY_GHAST_DEATH, 1, 0.5F);
+                                    });
+                                }
+                            }
+                        }.runTaskTimer(plugin, 20 * 90L, tickDelay);
+
                     }
                 }
             }.runTaskTimer(plugin, 0L, tickDelay); // 同步执行
