@@ -1,0 +1,4 @@
+name: Boss
+version: '1.0'
+main: sudark2.Sudark.boss.Boss
+api-version: '1.21'
