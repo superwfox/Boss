@@ -35,12 +35,13 @@ public final class Boss extends JavaPlugin {
 
     public void prepareZone() {
         //循声守卫
-        zones.add(p(-17, 6, 15));
-        endZones.add(p(16, -5, -17));
+        zones.add(p(-16, 6, 14));
+        endZones.add(p(15, -5, -16));
         //熔岩果冻
         zones.add(p(126, -8, 18));
         endZones.add(p(72, 7, -38));
-        //
+        //骷髅王
+
     }
 
     public Location p(int x, int y, int z) {

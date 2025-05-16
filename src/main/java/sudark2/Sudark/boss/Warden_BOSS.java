@@ -65,7 +65,7 @@ public class Warden_BOSS {
                 });
 
             }
-        }.runTaskTimer(plugin, 20, 20L);
+        }.runTaskTimer(plugin, 8 * 20, 20L);
 
     }
 }

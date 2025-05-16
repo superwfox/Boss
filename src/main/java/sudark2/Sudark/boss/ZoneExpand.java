@@ -25,8 +25,10 @@ public class ZoneExpand implements Listener {
         if (e.getClickedBlock() == null) return;
         Block bl = e.getClickedBlock();
         Player pl = e.getPlayer();
-        if (!e.getClickedBlock().getType().equals(Material.DRAGON_EGG)) return;
+        if (!bl.getType().equals(Material.DRAGON_EGG)) return;
         if (!pl.getWorld().getName().equals("BEEF-DUNE")) return;
+
+        e.setCancelled(true);
 
         Location loc1 = Boss.zones.get(T);
         Location loc2 = Boss.endZones.get(T);
@@ -46,12 +48,12 @@ public class ZoneExpand implements Listener {
         bl.setType(Material.AIR);
         pl.playSound(pl, Sound.BLOCK_BEEHIVE_ENTER, 1, 1);
 
-        e.setCancelled(true);
         Plugin plugin = Boss.getPlugin(Boss.class);
 
         switch (T) {
             case 0 -> Warden_BOSS.newTask(plugin, bl.getLocation(), pl, range);
             case 1 -> Magma_BOSS.newTask(plugin, bl.getLocation(), pl, range);
+            case 2 -> SkeletonKing_BOSS.newTask(plugin, bl.getLocation(), pl, range);
         }
     }
 
@@ -241,7 +243,7 @@ public class ZoneExpand implements Listener {
                                     });
                                 }
                             }
-                        }.runTaskTimer(plugin, 20 * 90L, tickDelay);
+                        }.runTaskTimer(plugin, 20 * 60 * 20L, tickDelay);
 
                     }
                 }
