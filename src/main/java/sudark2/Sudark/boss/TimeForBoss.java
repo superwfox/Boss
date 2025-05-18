@@ -26,9 +26,8 @@ public class TimeForBoss {
                 if (18 <= T || T <= 6) {
                     T = R.nextInt(0, 1);
                 } else {
-                    T = R.nextInt(1, 2);
+                    T = R.nextInt(1, 3);
                 }
-                T = 2;
 
                 int x = R.nextInt(-2000, 2000);
                 while (Bukkit.getWorld("BEEF-DUNE").getHighestBlockAt(x, x).getType().equals(Material.WATER)) {

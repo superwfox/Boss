@@ -1,17 +1,12 @@
 package sudark2.Sudark.boss;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.*;
+import org.bukkit.block.Block;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.boss.BossBar;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
@@ -20,7 +15,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
-import org.joml.AxisAngle4f;
+import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import static sudark2.Sudark.boss.Success.success;
@@ -32,9 +27,11 @@ public class SkeletonKing_BOSS {
 
         Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(e -> {
             if (e instanceof Player p) {
-                Title.title(p, "-§e§lSkeletonKing§f-", "恭迎你们的新王——骸骨将军");
-                p.teleport(Core.clone().add(0, 0, 5));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 5, 10, false, false, false));
+                Title.title(p, "-§e§lSkeletonKing§f-", "恭迎你们的新王——骸骨之王");
+                Location plCore = Core.clone().add(7, 10, 0);
+                plCore.setYaw(90);
+                p.teleport(plCore);
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 20 * 5, 100, false, false, false));
             }
         });
 
@@ -55,20 +52,25 @@ public class SkeletonKing_BOSS {
             public void run() {
 
                 if (time == 0) {
-                    skeleton = (WitherSkeleton) Core.getWorld().spawnEntity(Core, EntityType.WITHER_SKELETON);
+                    skeleton = (WitherSkeleton) Core.getWorld().spawnEntity(Core.clone().add(0, 3, 0), EntityType.WITHER_SKELETON);
                     skeleton.setMaxHealth(40);
                     skeleton.setHealth(40);
                     skeleton.setCustomName("骸骨将军");
                     armor(skeleton);
+
+                    Core.getWorld().spawnParticle(Particle.SCULK_SOUL, Core.clone().add(0, 4, 0), 60, 0.8f, 0.8f, 0.8f, 0.1f);
                 }
 
                 time++;
 
                 {
                     int bar = 0;
-                    if (!skeleton.isDead()) bar = (int) ((int) skeleton.getHealth() / skeleton.getMaxHealth() * 4) + 16;
-                    if (!wither.isDead()) bar = (int) (wither.getHealth() / wither.getMaxHealth() * 13) + 3;
-                    if (witherHead != null) bar = head;
+                    if (skeleton != null && !skeleton.isDead())
+                        bar = (int) ((int) skeleton.getHealth() / skeleton.getMaxHealth() * 4) + 16;
+                    if (wither != null && !wither.isDead())
+                        bar = (int) (wither.getHealth() / 200 * 13) + 3;
+                    if (witherHead != null)
+                        bar = head;
                     bossBar.setProgress(bar / 20f);
                     Bukkit.getOnlinePlayers().forEach(bossBar::removePlayer);
                     Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(e -> {
@@ -76,93 +78,127 @@ public class SkeletonKing_BOSS {
                     });
                 }
 
-                if (skeleton.isDead() && sb) {
-                    wither = (Wither) Core.getWorld().spawnEntity(Core, EntityType.WITHER);
-                    wither.setMaxHealth(400);
-                    wither.setHealth(199);
+                if (skeleton != null && skeleton.isDead() && sb) {
+                    wither = (Wither) Core.getWorld().spawnEntity(Core.clone().add(0, 5, 0), EntityType.WITHER);
+                    wither.setMaxHealth(600);
+                    wither.setHealth(200);
                     wither.setCustomName("骸骨真身");
+                    Core.getWorld().spawnParticle(Particle.SCULK_SOUL, Core.clone().add(0, 3, 0), 60, 0.8f, 0.8f, 0.8f, 0.1f);
 
-                    for (int i = 0; i < 4; i++) {
-                        WitherSkeleton skeletonX = (WitherSkeleton) Core.getWorld().spawnEntity(Core, EntityType.WITHER_SKELETON);
+                    for (int i = -1; i <= 1; i += 2) {
+
+                        WitherSkeleton skeletonX = (WitherSkeleton) Core.getWorld().spawnEntity(
+                                Core.clone().add(i * 4, 3, 0 * 4), EntityType.WITHER_SKELETON
+                        );
                         armorX(skeletonX);
+                        Core.getWorld().spawnParticle(Particle.CLOUD, Core.clone().add(i * 4, 0, 0), 10, 0.8f, 0.8f, 0.8f, 0.1f);
+
+                    }
+                    for (int j = -1; j <= 1; j += 2) {
+
+                        WitherSkeleton skeletonX = (WitherSkeleton) Core.getWorld().spawnEntity(
+                                Core.clone().add(0, 3, j * 4), EntityType.WITHER_SKELETON
+                        );
+                        armorX(skeletonX);
+                        Core.getWorld().spawnParticle(Particle.CLOUD, Core.clone().add(0, 0, j * 4), 10, 0.8f, 0.8f, 0.8f, 0.1f);
+
                     }
 
-                    sb = true;
+                    sb = false;
                 }
 
-                if (skeleton.isDead() && wither.isDead() && wb) {
-                    witherHead = (BlockDisplay) Head.getWorld().spawnEntity(Head, EntityType.BLOCK_DISPLAY);
-                    witherHead.setBlock(Material.WITHER_SKELETON_SKULL.createBlockData());
+                if (wither != null && skeleton != null && skeleton.isDead() && wither.isDead()) {
+                    if (wb) {
+                        witherHead = (BlockDisplay) Head.getWorld().spawnEntity(Head, EntityType.BLOCK_DISPLAY);
+                        witherHead.setBlock(Material.WITHER_SKELETON_SKULL.createBlockData());
 
-                    witherHead.setDisplayWidth(2);
-                    witherHead.setDisplayHeight(2);
+                        Core.getWorld().spawnParticle(Particle.SCULK_SOUL, Core.clone().add(0, 5, 0), 60, 0.8f, 0.8f, 0.8f, 0.1f);
 
-                    WitherHead = new BukkitRunnable() {
-                        @Override
-                        public void run() {
-                            Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(en -> {
-                                if (en instanceof Player p) {
-                                    p.playSound(p, Sound.ENTITY_WITHER_SHOOT, 1, 1);
+                        WitherHead = new BukkitRunnable() {
+                            @Override
+                            public void run() {
+                                Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(en -> {
+                                    if (en instanceof Player p) {
+                                        p.playSound(p, Sound.ENTITY_WITHER_SHOOT, 1, 1);
+                                        p.sendActionBar("把 §c红沙§f 全炸掉！");
 
-                                    Location from = Head.clone().add(0, 0.5, 0);
-                                    Location to = p.getLocation().clone().add(0, 1.5, 0);
-                                    Vector dir = to.toVector().subtract(from.toVector()).normalize();
+                                        Location from = Head.clone().add(0, 0.5, 0);
+                                        Location to = p.getLocation().clone().add(0, 1.5, 0);
+                                        Vector dir = to.toVector().subtract(from.toVector()).normalize();
 
-                                    WitherSkull skull = (WitherSkull) Head.getWorld().spawnEntity(from, EntityType.WITHER_SKULL);
-                                    skull.setVelocity(dir.multiply(1.2));
-                                    skull.setCharged(true);
-                                    skull.setCustomName("骸骨残躯");
+                                        WitherSkull skull = (WitherSkull) Head.getWorld().spawnEntity(from, EntityType.WITHER_SKULL);
+                                        skull.setVelocity(dir.multiply(1.5));
+                                        skull.setCharged(true);
+                                        skull.setCustomName("骸骨残躯");
 
-                                    Vector direction = to.toVector().subtract(from.toVector()).normalize();
-                                    double yaw = Math.atan2(-direction.getX(), direction.getZ()); // 朝向角度（绕 Y 轴）
-                                    float angleRadians = (float) yaw; // 弧度
+                                        // 获取 from → to 的方向向量（玩家头部）
+                                        Vector direction = to.clone().subtract(from).toVector().normalize();
+                                        Vector3f dirVec = new Vector3f((float) direction.getX(), (float) direction.getY(), (float) direction.getZ());
+                                        Quaternionf rotation = new Quaternionf().rotateTo(new Vector3f(0, 0, 1), dirVec);
+                                        Vector3f scale = new Vector3f(3f, 3f, 3f);
+                                        Vector3f translation = new Vector3f(0f, 0f, 0f);
+                                        Transformation transformation = new Transformation(translation, rotation, scale, rotation);
 
-                                    AxisAngle4f rotation = new AxisAngle4f(0, 1, 0, angleRadians);
+                                        witherHead.setTransformation(transformation);
 
-                                    Vector3f translation = new Vector3f(0f, 0f, 0f);
-                                    Vector3f scale = new Vector3f(1f, 1f, 1f);
-                                    Transformation transformation = new Transformation(translation, rotation, scale, rotation);
-                                    witherHead.setTransformation(transformation);
+                                    }
+                                });
+                            }
+                        }.runTaskTimer(plugin, 0, 30);
 
-                                }
-                            });
-                        }
-                    }.runTaskTimer(plugin, 0, 40);
+                        wb = false;
+                    } else {
+                        Location center = Core.clone().add(0, 3, 0);
+                        int cx = center.getBlockX();
+                        int cy = center.getBlockY();
+                        int cz = center.getBlockZ();
+                        int count = 0;
 
-                    class SkeletonKingListener implements Listener {
-                        @EventHandler
-                        public void onEntityDamage(EntityDamageByEntityEvent e) {
-                            if (e.getEntity() instanceof BlockDisplay bl) {
-                                if (bl == witherHead) {
-                                    head--;
-                                    Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(en -> {
-                                        if (en instanceof Player p) p.playSound(p, Sound.ENTITY_WITHER_HURT, 1, 1);
-                                    });
+                        for (int x = cx - 5; x <= cx + 5; x++) {
+                            for (int z = cz - 5; z <= cz + 5; z++) {
+                                for (int y = cy; y <= cy + 3; y++) { // 只向上延伸3格
+                                    Block block = center.getWorld().getBlockAt(x, y, z);
+                                    if (block.getType() == Material.RED_SAND) {
+                                        count++;
+                                    }
                                 }
                             }
-
                         }
+                        head = Math.min(count / 6, 20);
                     }
-                    Bukkit.getPluginManager().registerEvents(new SkeletonKingListener(), plugin);
-
-                    wb = false;
                 }
 
+
                 if (head <= 0) {
+                    Head.getWorld().spawnParticle(Particle.EXPLOSION_EMITTER, Head, 30, 1.2f, 1.2f, 1.2f, 0.1f);
+
                     cancel();
                     WitherHead.cancel();
 
                     witherHead.remove();
 
+                    bossBar.removeAll();
+
                     Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(entity -> {
+
                         if (entity instanceof Player pl) {
                             success(pl, new ItemStack(Material.REPEATING_COMMAND_BLOCK), 55, 3);
                         }
                     });
                 }
 
+                if (time == 20 * 60) {
+                    cancel();
+                    WitherHead.cancel();
+                    bossBar.removeAll();
+
+                    if (witherHead != null) witherHead.remove();
+                    if (skeleton != null) skeleton.remove();
+                    if (wither != null) wither.remove();
+                }
+
             }
-        }.runTaskTimer(plugin, 15 * 20, 20);
+        }.runTaskTimer(plugin, 35 * 20, 20);
     }
 
     public static void armor(WitherSkeleton skeleton) {

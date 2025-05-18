@@ -41,7 +41,9 @@ public final class Boss extends JavaPlugin {
         zones.add(p(126, -8, 18));
         endZones.add(p(72, 7, -38));
         //骷髅王
-
+        zones.add(p(170,0,-34));
+        endZones.add(p(222,16,18));
+        //TODD
     }
 
     public Location p(int x, int y, int z) {

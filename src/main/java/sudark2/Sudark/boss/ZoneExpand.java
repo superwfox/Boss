@@ -219,36 +219,40 @@ public class ZoneExpand implements Listener {
                         Location newLoc = new Location(targetWorld, targetX + relX, targetY + relY, targetZ + relZ);
 
                         // 复制方块类型（空气用默认值）
-                        Block blockType = source.getBlock();
+                        Block targetBlock = source.getBlock();
 
-                        restoreBlocks.push(newLoc.getBlock().getState());
-                        newLoc.getBlock().setBlockData(blockType.getBlockData(), false);
-                    }
+                        if (targetBlock.getType() == Material.AIR && newLoc.getBlock().getType() == Material.AIR) continue;
 
-                    // 队列为空，任务结束
-                    if (blockQueue.isEmpty()) {
-                        cancel();
+                            restoreBlocks.push(newLoc.getBlock().getState());
+                            newLoc.getBlock().setBlockData(targetBlock.getBlockData(), false);
+                        }
 
-                        new BukkitRunnable() {
-                            @Override
-                            public void run() {
-                                for (int i = 0; i < 32 && !restoreBlocks.isEmpty(); i++) {
-                                    BlockState state = restoreBlocks.pop();
-                                    state.update(true, false);
+                        // 队列为空，任务结束
+                        if (blockQueue.isEmpty()) {
+                            cancel();
+
+                            new BukkitRunnable() {
+                                @Override
+                                public void run() {
+                                    for (int i = 0; i < 32 && !restoreBlocks.isEmpty(); i++) {
+                                        BlockState state = restoreBlocks.pop();
+                                        state.update(true, false);
+                                    }
+                                    if (restoreBlocks.isEmpty()) {
+                                        cancel();
+                                        Bukkit.getOnlinePlayers().forEach(pl -> {
+                                            pl.playSound(pl, Sound.ENTITY_GHAST_DEATH, 1, 0.5F);
+                                        });
+                                    }
                                 }
-                                if (restoreBlocks.isEmpty()) {
-                                    cancel();
-                                    Bukkit.getOnlinePlayers().forEach(pl -> {
-                                        pl.playSound(pl, Sound.ENTITY_GHAST_DEATH, 1, 0.5F);
-                                    });
-                                }
-                            }
-                        }.runTaskTimer(plugin, 20 * 60 * 20L, tickDelay);
+                            }.runTaskTimer(plugin, 20 * 60 * 20L, tickDelay);
 
+                        }
                     }
-                }
-            }.runTaskTimer(plugin, 0L, tickDelay); // 同步执行
+                }.
+
+                runTaskTimer(plugin, 0L,tickDelay); // 同步执行
+            }
         }
-    }
 
-}
+    }
