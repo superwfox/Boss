@@ -26,6 +26,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static sudark2.Sudark.boss.Success.success;
+import static sudark2.Sudark.boss.ZoneExpand.SpiralPlaneGenerator.resumeZone;
 
 public class Magma_BOSS {
     public static void newTask(Plugin plugin, Location Core, Player pl, int range) {
@@ -36,7 +37,7 @@ public class Magma_BOSS {
             if (e instanceof Player p) {
                 Title.title(p, "-§e§lMagmaCube§f-", "炙手又可爱的难得——熔岩果冻");
                 p.teleport(Core.clone().add(0, 0, 5));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 5, 10, false, false, false));
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 5*20, 10, false, false, false));
             }
         });
 
@@ -65,6 +66,7 @@ public class Magma_BOSS {
                                 case 0:
                                     Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(entity -> {
                                         if (entity instanceof Player pl) {
+                                            magmaCube.setInvulnerable(false);
                                             magmaCube.teleport(pl);
                                             magmaCube.setSize(3);
                                             magmaCube.getAttribute(Attribute.ATTACK_DAMAGE).setBaseValue(10);
@@ -74,11 +76,13 @@ public class Magma_BOSS {
                                 case 1:
                                     Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(entity -> {
                                         if (entity instanceof Player pl) {
+                                            magmaCube.setInvulnerable(true);
                                             magmaCube.setSize(1);
                                             Core.getWorld().spawnEntity(pl.getLocation(), EntityType.BLAZE);
                                         }
                                     });
                                 case 2:
+                                    magmaCube.setInvulnerable(false);
                                     new BukkitRunnable() {
                                         int time = 0;
 
@@ -138,6 +142,7 @@ public class Magma_BOSS {
                                         success(pl, new ItemStack(Material.CHAIN_COMMAND_BLOCK), 65, 2);
                                     }
                                 });
+                                resumeZone(Core, plugin);
                             }
 
                         }
@@ -147,7 +152,6 @@ public class Magma_BOSS {
                     Bukkit.getPluginManager().registerEvents(listener, plugin);
                 }
 
-                //function
                 Bukkit.getOnlinePlayers().forEach(bossBar::removePlayer);
                 AtomicReference<Boolean> exist = new AtomicReference<>(false);
                 Core.getWorld().getNearbyEntities(Core, range, range, range).forEach(e -> {
@@ -163,8 +167,11 @@ public class Magma_BOSS {
                     bossBar.removeAll();
                     magmaCube.remove();
                     HandlerList.unregisterAll(listener);
+                    resumeZone(Core, plugin);
+                    return;
                 }
 
+                magmaCube.setHealth(100);
             }
         }.runTaskTimer(plugin, 50 * 20L, 20L);
 

@@ -19,6 +19,7 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 import static sudark2.Sudark.boss.Success.success;
+import static sudark2.Sudark.boss.ZoneExpand.SpiralPlaneGenerator.resumeZone;
 
 public class SkeletonKing_BOSS {
 
@@ -185,6 +186,8 @@ public class SkeletonKing_BOSS {
                             success(pl, new ItemStack(Material.REPEATING_COMMAND_BLOCK), 55, 3);
                         }
                     });
+                    resumeZone(Core, plugin);
+                    return;
                 }
 
                 if (time == 20 * 60) {
@@ -195,6 +198,7 @@ public class SkeletonKing_BOSS {
                     if (witherHead != null) witherHead.remove();
                     if (skeleton != null) skeleton.remove();
                     if (wither != null) wither.remove();
+                    resumeZone(Core, plugin);
                 }
 
             }

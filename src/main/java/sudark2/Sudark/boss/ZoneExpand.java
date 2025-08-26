@@ -12,12 +12,15 @@ import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.bukkit.plugin.java.JavaPlugin.getPlugin;
 import static sudark2.Sudark.boss.TimeForBoss.T;
 import static sudark2.Sudark.boss.ZoneExpand.SpiralPlaneGenerator.generateSpiralBlockQueueAsync;
 
 public class ZoneExpand implements Listener {
+
+    static ConcurrentHashMap<Location, Deque<BlockState>> zones = new ConcurrentHashMap<>();
 
     @EventHandler
     public void onBossSpawn(PlayerInteractEvent e) {
@@ -32,6 +35,7 @@ public class ZoneExpand implements Listener {
 
         Location loc1 = Boss.zones.get(T);
         Location loc2 = Boss.endZones.get(T);
+        Location core = bl.getLocation();
 
         generateSpiralBlockQueueAsync(Boss.getPlugin(Boss.class), loc1, loc2).thenAccept(blockQueue -> {
             SpiralPlaneGenerator.moveBlocksSpirally(
@@ -40,7 +44,9 @@ public class ZoneExpand implements Listener {
                     bl.getLocation(),
                     60,
                     1L
-            );
+            ).thenAccept(result -> {
+                zones.put(core, result);
+            });
         });
 
         int range = Math.abs(loc1.getBlockX() - loc2.getBlockX());
@@ -51,9 +57,12 @@ public class ZoneExpand implements Listener {
         Plugin plugin = Boss.getPlugin(Boss.class);
 
         switch (T) {
-            case 0 -> Warden_BOSS.newTask(plugin, bl.getLocation(), pl, range);
-            case 1 -> Magma_BOSS.newTask(plugin, bl.getLocation(), pl, range);
-            case 2 -> SkeletonKing_BOSS.newTask(plugin, bl.getLocation(), pl, range);
+            case 0 -> Warden_BOSS.newTask(plugin, core, pl, range);
+            case 1 -> Magma_BOSS.newTask(plugin, core, pl, range);
+            case 2 -> SkeletonKing_BOSS.newTask(plugin, core, pl, range);
+            case 3 -> Shulker_BOSS.newTask(plugin, core, pl, range);
+            case 4 -> Silverhorn_BOSS.newTask(plugin, core, pl, range);
+
         }
     }
 
@@ -190,11 +199,12 @@ public class ZoneExpand implements Listener {
          * @param blocksPerTick 每tick设置的方块数
          * @param tickDelay     每次设置的间隔（tick）
          */
-        public static void moveBlocksSpirally(Plugin plugin, Queue<Location> blockQueue, Location target, int blocksPerTick, long tickDelay) {
+        public static CompletableFuture<Deque<BlockState>> moveBlocksSpirally(Plugin plugin, Queue<Location> blockQueue, Location target, int blocksPerTick, long tickDelay) {
             World targetWorld = target.getWorld();
             int targetX = target.getBlockX();
             int targetY = target.getBlockY();
             int targetZ = target.getBlockZ();
+            CompletableFuture<Deque<BlockState>> future = new CompletableFuture<>();
             Deque<BlockState> restoreBlocks = new ArrayDeque<>();
             Location setting = blockQueue.poll();
 
@@ -221,38 +231,42 @@ public class ZoneExpand implements Listener {
                         // 复制方块类型（空气用默认值）
                         Block targetBlock = source.getBlock();
 
-                        if (targetBlock.getType() == Material.AIR && newLoc.getBlock().getType() == Material.AIR) continue;
+                        if (targetBlock.getType() == Material.AIR && newLoc.getBlock().getType() == Material.AIR)
+                            continue;
 
-                            restoreBlocks.push(newLoc.getBlock().getState());
-                            newLoc.getBlock().setBlockData(targetBlock.getBlockData(), false);
-                        }
-
-                        // 队列为空，任务结束
-                        if (blockQueue.isEmpty()) {
-                            cancel();
-
-                            new BukkitRunnable() {
-                                @Override
-                                public void run() {
-                                    for (int i = 0; i < 32 && !restoreBlocks.isEmpty(); i++) {
-                                        BlockState state = restoreBlocks.pop();
-                                        state.update(true, false);
-                                    }
-                                    if (restoreBlocks.isEmpty()) {
-                                        cancel();
-                                        Bukkit.getOnlinePlayers().forEach(pl -> {
-                                            pl.playSound(pl, Sound.ENTITY_GHAST_DEATH, 1, 0.5F);
-                                        });
-                                    }
-                                }
-                            }.runTaskTimer(plugin, 20 * 60 * 20L, tickDelay);
-
-                        }
+                        restoreBlocks.push(newLoc.getBlock().getState());
+                        newLoc.getBlock().setBlockData(targetBlock.getBlockData(), false);
                     }
-                }.
 
-                runTaskTimer(plugin, 0L,tickDelay); // 同步执行
-            }
+                    // 队列为空，任务结束
+                    if (blockQueue.isEmpty()) {
+                        cancel();
+                        future.complete(restoreBlocks);
+                    }
+                }
+            }.runTaskTimer(plugin, 0L, tickDelay); // 同步执行
+            return future;
         }
 
+        public static void resumeZone(Location Core, Plugin plugin) {
+            Deque<BlockState> restoreBlocks = zones.get(Core);
+            new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (restoreBlocks == null) return;
+                    for (int i = 0; i < 32 && !restoreBlocks.isEmpty(); i++) {
+                        BlockState state = restoreBlocks.pop();
+                        state.update(true, false);
+                    }
+                    if (restoreBlocks.isEmpty()) {
+                        cancel();
+                        Bukkit.getOnlinePlayers().forEach(pl -> {
+                            pl.playSound(pl, Sound.ENTITY_GHAST_DEATH, 1, 0.5F);
+                        });
+                    }
+                }
+            }.runTaskTimer(plugin, 0L, 1L);
+        }
     }
+
+}

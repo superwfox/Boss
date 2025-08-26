@@ -14,6 +14,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import static sudark2.Sudark.boss.Success.success;
+import static sudark2.Sudark.boss.ZoneExpand.SpiralPlaneGenerator.resumeZone;
 
 public class Warden_BOSS {
     public static void newTask(Plugin plugin, Location Core, Player pl, int range) {
@@ -43,6 +44,7 @@ public class Warden_BOSS {
                     cancel();
                     bossBar.removeAll();
                     warden.remove();
+                    resumeZone(Core,plugin);
                 }
 
                 if (warden.isDead()) {
@@ -51,6 +53,7 @@ public class Warden_BOSS {
                             success(pl, new ItemStack(Material.COMMAND_BLOCK), 50, 1);
                         }
                     });
+                    resumeZone(Core,plugin);
                     bossBar.removeAll();
                     cancel();
                     return;

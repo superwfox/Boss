@@ -10,6 +10,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import static sudark2.Sudark.boss.Title.title;
+
 public class Success {
 
     public static void success(Player pl, ItemStack gift, int lvl, int grade) {
@@ -20,6 +22,28 @@ public class Success {
 
         lvlUp(pl, lvl);
 
+        celebrate(pl, grade);
+
+    }
+
+    public static void celebrate(Player pl, int grade) {
+        String color = "";
+        int lvl = 0;
+        switch (grade) {
+            case 1 -> {
+                color = "§6";
+                lvl = 50;
+            }
+            case 2 -> {
+                color = "§e";
+                lvl = 65;
+            }
+            case 3 -> {
+                color = "§e§l";
+                lvl = 80;
+            }
+        }
+        title(pl, color + "= 恭喜 =", "Congratulations! lvl + §b" + lvl);
     }
 
     public static void firework(Player pl, int grade) {

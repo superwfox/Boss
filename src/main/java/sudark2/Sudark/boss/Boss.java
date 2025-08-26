@@ -20,6 +20,7 @@ public final class Boss extends JavaPlugin {
         TimeForBoss.checkTime(this);
 
         Bukkit.getPluginManager().registerEvents(new ZoneExpand(), this);
+        Bukkit.getPluginCommand("boss").setExecutor(new TimeForBoss());
 
         new BukkitRunnable() {
             @Override
@@ -41,9 +42,15 @@ public final class Boss extends JavaPlugin {
         zones.add(p(126, -8, 18));
         endZones.add(p(72, 7, -38));
         //骷髅王
-        zones.add(p(170,0,-34));
-        endZones.add(p(222,16,18));
-        //TODD
+        zones.add(p(170, 0, -34));
+        endZones.add(p(222, 16, 18));
+        //白玉贝
+        zones.add(p(302, -2, -27));
+        endZones.add(p(358, 16, 29));
+        //银角
+        zones.add(p(410, -6, -22));
+        endZones.add(p(457, 10, 26));
+        //金角
     }
 
     public Location p(int x, int y, int z) {
